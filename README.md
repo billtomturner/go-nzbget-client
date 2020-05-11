@@ -1,6 +1,1 @@
-# NZBGet -> InfluxDB
-## Intro
-## Usage
-## Testing
-## Thanks
-## Contributing
+# go-nzbget-client
