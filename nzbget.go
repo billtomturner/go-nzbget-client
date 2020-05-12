@@ -4,18 +4,30 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"net/url"
+	"path"
 )
 
-func New(baseURL string) NZBGet {
-	return NZBGet{
-		client:  &http.Client{},
-		baseURL: baseURL,
+// New returns a new instance of an NZBGet client
+func New(baseURL, user, password string) (*NZBGet, error) {
+	url, err := url.Parse(baseURL)
+	if err != nil {
+		return nil, err
 	}
+	return &NZBGet{
+		client:   &http.Client{},
+		baseURL:  url,
+		user:     user,
+		password: password,
+	}, nil
 }
 
+// NZBGet is a client instance for NZBGet
 type NZBGet struct {
-	client  *http.Client
-	baseURL string
+	client   *http.Client
+	baseURL  *url.URL
+	user     string
+	password string
 }
 
 type Response struct {
@@ -244,7 +256,9 @@ func (n NZBGet) ServerVolumes() (*NZBServerVolumes, error) {
 }
 
 func (n NZBGet) get(endpoint string, responseObject interface{}) error {
-	req, err := http.NewRequest("GET", n.baseURL+"/"+endpoint, nil)
+	n.baseURL.Path = path.Join("jsonrpc", endpoint)
+	req, err := http.NewRequest("GET", n.baseURL.String(), nil)
+	req.SetBasicAuth(n.user, n.password)
 	if err != nil {
 		return err
 	}
