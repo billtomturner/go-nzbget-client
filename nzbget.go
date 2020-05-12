@@ -30,7 +30,7 @@ type NZBGet struct {
 	password string
 }
 
-type Response struct {
+type response struct {
 	Result  json.RawMessage `json:"result"`
 	Version string          `json:"version"`
 }
@@ -267,7 +267,7 @@ func (n NZBGet) get(endpoint string, responseObject interface{}) error {
 		return err
 	}
 	defer result.Body.Close()
-	var response Response
+	var response response
 	err = json.NewDecoder(result.Body).Decode(&response)
 	if err != nil {
 		log.Printf("error unmarshaling nzbget status: %v", err)
