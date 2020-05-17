@@ -10,13 +10,13 @@ import (
 
 // New returns a new instance of an NZBGet client
 func New(baseURL, user, password string) (*NZBGet, error) {
-	url, err := url.Parse(baseURL)
+	nzbgetURL, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, err
 	}
 	return &NZBGet{
 		client:   &http.Client{},
-		baseURL:  url,
+		baseURL:  nzbgetURL,
 		user:     user,
 		password: password,
 	}, nil
@@ -33,6 +33,23 @@ type NZBGet struct {
 type response struct {
 	Result  json.RawMessage `json:"result"`
 	Version string          `json:"version"`
+}
+
+// Config returns the server configuration
+func (n NZBGet) Config() (map[string]string, error) {
+	config := map[string]string{}
+	var configEntries []struct {
+		Name  string
+		Value string
+	}
+	err := n.get("config", &configEntries)
+	if err != nil {
+		return nil, err
+	}
+	for _, entry := range configEntries {
+		config[entry.Name] = entry.Value
+	}
+	return config, nil
 }
 
 // NZBFileGroup is summary information for each group (nzb-file).
@@ -293,9 +310,10 @@ type NZBFileGroup struct {
 	ServerStats []struct {
 		// FailedArticles (int) - Number of failed articles.
 		FailedArticles int `json:"FailedArticles"`
-		// ServerID (int) - Server number as defined in section “news servers” of the configuration file.
+		// ServerID is the server number as defined in section “news servers”
+		// of the configuration file.
 		ServerID int `json:"ServerID"`
-		// SuccessArticles (int) - Number of successfully downloaded articles.
+		// SuccessArticles is the number of successfully downloaded articles.
 		SuccessArticles int `json:"SuccessArticles"`
 	} `json:"ServerStats"`
 
@@ -359,13 +377,13 @@ type NZBFileGroup struct {
 }
 
 // FileGroups returns the list of all file groups
-func (n NZBGet) FileGroups() (*NZBFileGroup, error) {
-	var fileGroups NZBFileGroup
+func (n NZBGet) FileGroups() ([]NZBFileGroup, error) {
+	var fileGroups []NZBFileGroup
 	err := n.get("listgroups", &fileGroups)
 	if err != nil {
 		return nil, err
 	}
-	return &fileGroups, nil
+	return fileGroups, nil
 }
 
 type NZBStatus struct {
@@ -474,17 +492,22 @@ type NZBStatus struct {
 		ID int `json:"ID"`
 	} `json:"NewsServers"`
 
-	// ParJobCount (int) - v12.0 Deprecated, use PostJobCount instead.
+	// ParJobCount is deprecated, use PostJobCount instead.
 	ParJobCount int `json:"ParJobCount"`
 
-	// PostJobCount (int) - Number of Par-Jobs or Post-processing script jobs in the post-processing queue (including current file).
+	// PostJobCount is the number of Par-Jobs or Post-processing script jobs in
+	// the post-processing queue (including current file).
 	PostJobCount int `json:"PostJobCount"`
 
-	// PostPaused (bool) - “True” if post-processor queue is currently in paused-state.
+	// PostPaused is “True” if post-processor queue is currently in paused-state.
 	PostPaused bool `json:"PostPaused"`
 
-	QueueScriptCount int  `json:"QueueScriptCount"`
-	QuotaReached     bool `json:"QuotaReached"`
+	// QueueScriptCount is the number of Par-Jobs or Post-processing script jobs
+	// in the script queue (including current file).
+	QueueScriptCount int `json:"QueueScriptCount"`
+
+	// QuotaReached is “True” if the quota has been reached
+	QuotaReached bool `json:"QuotaReached"`
 
 	// RemainingSizeHi is the remaining size of all entries in download queue,
 	// in bytes. This field contains the high 32-bits of 64-bit value
@@ -498,20 +521,25 @@ type NZBStatus struct {
 	// in megabytes.
 	RemainingSizeMB int `json:"RemainingSizeMB"`
 
-	// ResumeTime (int) - Time to resume if set with method “scheduleresume”. Time is in C/Unix format.
+	// ResumeTime is the time to resume if set with method “scheduleresume”.
+	// Time is in C/Unix format.
 	ResumeTime int `json:"ResumeTime"`
 
-	// ScanPaused (bool) - “True” if the scanning of incoming nzb-directory is currently in paused-state.
+	// ScanPaused (bool) - “True” if the scanning of incoming nzb-directory is
+	// currently in paused-state.
 	ScanPaused   bool `json:"ScanPaused"`
 	ServerPaused bool `json:"ServerPaused"`
 
-	// ServerStandBy (bool) - “False” - there are currently downloads running, “True” - no downloads in progress (server paused or all jobs completed).
+	// ServerStandBy (bool) - “False” - there are currently downloads running,
+	// “True” - no downloads in progress (server paused or all jobs completed).
 	ServerStandBy bool `json:"ServerStandBy"`
 
-	// ServerTime (int) - Current time on computer running NZBGet. Time is in C/Unix format (number of seconds since 00:00:00 UTC, January 1, 1970).
+	// ServerTime (int) - Current time on computer running NZBGet. Time is in
+	// C/Unix format (number of seconds since 00:00:00 UTC, January 1, 1970).
 	ServerTime int `json:"ServerTime"`
 
-	// ThreadCount (int) - Number of threads running. It includes all threads, created by the program, not only download-threads.
+	// ThreadCount (int) - Number of threads running. It includes all threads,
+	// created by the program, not only download-threads.
 	ThreadCount int `json:"ThreadCount"`
 
 	// UpTimeSec (int) - Server uptime in seconds.
@@ -573,16 +601,16 @@ type NZBServerVolumes struct {
 	CustomTime int `json:"CustomTime"`
 
 	// BytesPerSeconds is the - Per-second amount of data downloaded in last 60 seconds. See below.
-	BytesPerSeconds ByteRate `json:"BytesPerSeconds"`
+	BytesPerSeconds []ByteRate `json:"BytesPerSeconds"`
 
 	// BytesPerMinutes is the - Per-minute amount of data downloaded in last 60 minutes. See below.
-	BytesPerMinutes ByteRate `json:"BytesPerMinutes"`
+	BytesPerMinutes []ByteRate `json:"BytesPerMinutes"`
 
 	// BytesPerHours is the - Per-hour amount of data downloaded in last 24 hours. See below.
-	BytesPerHours ByteRate `json:"BytesPerHours"`
+	BytesPerHours []ByteRate `json:"BytesPerHours"`
 
 	// BytesPerDays is the - Per-day amount of data downloaded since program installation. See below.
-	BytesPerDays ByteRate `json:"BytesPerDays"`
+	BytesPerDays []ByteRate `json:"BytesPerDays"`
 
 	// SecSlot is the The current second slot of field BytesPerSeconds the program writes into.
 	SecSlot int `json:"SecSlot"`
@@ -601,22 +629,22 @@ type NZBServerVolumes struct {
 }
 
 // ServerVolumes returns the current status of nzbget
-func (n NZBGet) ServerVolumes() (*NZBServerVolumes, error) {
-	var volumes NZBServerVolumes
+func (n NZBGet) ServerVolumes() ([]NZBServerVolumes, error) {
+	var volumes []NZBServerVolumes
 	err := n.get("servervolumes", &volumes)
 	if err != nil {
 		return nil, err
 	}
-	return &volumes, nil
+	return volumes, nil
 }
 
 func (n NZBGet) get(endpoint string, responseObject interface{}) error {
 	n.baseURL.Path = path.Join("jsonrpc", endpoint)
 	req, err := http.NewRequest("GET", n.baseURL.String(), nil)
-	req.SetBasicAuth(n.user, n.password)
 	if err != nil {
 		return err
 	}
+	req.SetBasicAuth(n.user, n.password)
 	result, err := n.client.Do(req)
 	if err != nil {
 		return err
