@@ -1038,6 +1038,143 @@ const (
     "UrlCount": 0
   }
 }`
+	history = `{
+  "version": "1.1",
+  "result": [
+    {
+      "ID": 15846,
+      "Name": "My_File_1",
+      "RemainingFileCount": 0,
+      "RetryData": false,
+      "HistoryTime": 1589707990,
+      "Status": "SUCCESS/HEALTH",
+      "Log": [],
+      "NZBID": 15846,
+      "NZBName": "My_File_1",
+      "NZBNicename": "My_File_1",
+      "Kind": "NZB",
+      "URL": "",
+      "NZBFilename": "/My_File_1.nzb",
+      "DestDir": "/Dest/My_File_1.nzb",
+      "FinalDir": "/MyDir/My_File_1.nzb",
+      "Category": "Comics",
+      "ParStatus": "NONE",
+      "ExParStatus": "NONE",
+      "UnpackStatus": "NONE",
+      "MoveStatus": "SUCCESS",
+      "ScriptStatus": "NONE",
+      "DeleteStatus": "NONE",
+      "MarkStatus": "NONE",
+      "UrlStatus": "NONE",
+      "FileSizeLo": 31871884,
+      "FileSizeHi": 0,
+      "FileSizeMB": 30,
+      "FileCount": 1,
+      "MinPostTime": 1469263988,
+      "MaxPostTime": 1469263988,
+      "TotalArticles": 49,
+      "SuccessArticles": 49,
+      "FailedArticles": 0,
+      "Health": 1000,
+      "CriticalHealth": 1000,
+      "DupeKey": "",
+      "DupeScore": 0,
+      "DupeMode": "SCORE",
+      "Deleted": false,
+      "DownloadedSizeLo": 31837060,
+      "DownloadedSizeHi": 0,
+      "DownloadedSizeMB": 30,
+      "DownloadTimeSec": 3,
+      "PostTotalTimeSec": 1,
+      "ParTimeSec": 0,
+      "RepairTimeSec": 0,
+      "UnpackTimeSec": 0,
+      "MessageCount": 11,
+      "ExtraParBlocks": 0,
+      "Parameters": [
+        {
+          "Name": "*Unpack:",
+          "Value": "no"
+        }
+      ],
+      "ScriptStatuses": [
+      ],
+      "ServerStats": [
+        {
+          "ServerID": 1,
+          "SuccessArticles": 49,
+          "FailedArticles": 0
+        }
+      ]
+    },
+    {
+      "ID": 15845,
+      "Name": "My_File_2",
+      "RemainingFileCount": 0,
+      "RetryData": false,
+      "HistoryTime": 1589707977,
+      "Status": "SUCCESS/HEALTH",
+      "Log": [],
+      "NZBID": 15845,
+      "NZBName": "My_File_2",
+      "NZBNicename": "My_File_2",
+      "Kind": "NZB",
+      "URL": "",
+      "NZBFilename": "\/config\/mylar\/cache\/My_File_2.nzb",
+      "DestDir": "/Dest/My_File_2",
+      "FinalDir": "",
+      "Category": "Comics",
+      "ParStatus": "NONE",
+      "ExParStatus": "NONE",
+      "UnpackStatus": "NONE",
+      "MoveStatus": "SUCCESS",
+      "ScriptStatus": "NONE",
+      "DeleteStatus": "NONE",
+      "MarkStatus": "NONE",
+      "UrlStatus": "NONE",
+      "FileSizeLo": 35237544,
+      "FileSizeHi": 0,
+      "FileSizeMB": 33,
+      "FileCount": 1,
+      "MinPostTime": 1469286370,
+      "MaxPostTime": 1469286370,
+      "TotalArticles": 54,
+      "SuccessArticles": 54,
+      "FailedArticles": 0,
+      "Health": 1000,
+      "CriticalHealth": 1000,
+      "DupeKey": "",
+      "DupeScore": 0,
+      "DupeMode": "SCORE",
+      "Deleted": false,
+      "DownloadedSizeLo": 35193998,
+      "DownloadedSizeHi": 0,
+      "DownloadedSizeMB": 33,
+      "DownloadTimeSec": 3,
+      "PostTotalTimeSec": 1,
+      "ParTimeSec": 0,
+      "RepairTimeSec": 0,
+      "UnpackTimeSec": 0,
+      "MessageCount": 11,
+      "ExtraParBlocks": 0,
+      "Parameters": [
+        {
+          "Name": "*Unpack:",
+          "Value": "no"
+        }
+      ],
+      "ScriptStatuses": [
+      ],
+      "ServerStats": [
+        {
+          "ServerID": 1,
+          "SuccessArticles": 54,
+          "FailedArticles": 0
+        }
+      ]
+    }
+  ]
+}`
 )
 
 var _ = Describe("NZBGet", func() {
@@ -1168,6 +1305,30 @@ var _ = Describe("NZBGet", func() {
 					"FeedActive":          Equal(false),
 					"QueueScriptCount":    Equal(0),
 				}))
+			})
+		})
+	})
+
+	Context("#History", func() {
+		Context("successful", func() {
+			AfterEach(func() {
+				gock.Off()
+			})
+
+			BeforeEach(func() {
+				gock.New(nzbgetURL).
+					Get("/jsonrpc/history").
+					MatchParams(map[string]string{}).
+					Reply(200).
+					JSON(history)
+			})
+
+			It("should return the history", func() {
+				client, err := nzbget.New(nzbgetURL, "user", "password")
+				Expect(err).ToNot(HaveOccurred())
+				history, err := client.History()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(len(history)).To(Equal(2))
 			})
 		})
 	})

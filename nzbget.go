@@ -52,8 +52,8 @@ func (n NZBGet) Config() (map[string]string, error) {
 	return config, nil
 }
 
-// NZBFileGroup is summary information for each group (nzb-file).
-type NZBFileGroup struct {
+// FileGroup is summary information for each group (nzb-file).
+type FileGroup struct {
 	// ActiveDownloads is the number of active downloads in the group. With this
 	// filed can be determined what group(s) is (are) being currently
 	// downloaded. In most cases only one group is downloaded at a time however
@@ -377,8 +377,8 @@ type NZBFileGroup struct {
 }
 
 // FileGroups returns the list of all file groups
-func (n NZBGet) FileGroups() ([]NZBFileGroup, error) {
-	var fileGroups []NZBFileGroup
+func (n NZBGet) FileGroups() ([]FileGroup, error) {
+	var fileGroups []FileGroup
 	err := n.get("listgroups", &fileGroups)
 	if err != nil {
 		return nil, err
@@ -386,7 +386,7 @@ func (n NZBGet) FileGroups() ([]NZBFileGroup, error) {
 	return fileGroups, nil
 }
 
-type NZBStatus struct {
+type Status struct {
 	// ArticleCacheHi is the current usage of article cache, in bytes. This
 	// field contains the high 32-bits of 64-bit value
 	ArticleCacheHi int `json:"ArticleCacheHi"`
@@ -550,8 +550,8 @@ type NZBStatus struct {
 }
 
 // Status returns the current status of nzbget
-func (n NZBGet) Status() (*NZBStatus, error) {
-	var status NZBStatus
+func (n NZBGet) Status() (*Status, error) {
+	var status Status
 	err := n.get("status", &status)
 	if err != nil {
 		return nil, err
@@ -571,8 +571,8 @@ type ByteRate struct {
 	SizeMB int
 }
 
-// NZBServerVolumes represents download volume statistics per news-server
-type NZBServerVolumes struct {
+// ServerVolume represents download volume statistics per news-server
+type ServerVolume struct {
 	// ServerID is the ID of news server
 	ServerID int `json:"ServerID"`
 
@@ -629,13 +629,262 @@ type NZBServerVolumes struct {
 }
 
 // ServerVolumes returns the current status of nzbget
-func (n NZBGet) ServerVolumes() ([]NZBServerVolumes, error) {
-	var volumes []NZBServerVolumes
+func (n NZBGet) ServerVolumes() ([]ServerVolume, error) {
+	var volumes []ServerVolume
 	err := n.get("servervolumes", &volumes)
 	if err != nil {
 		return nil, err
 	}
 	return volumes, nil
+}
+
+// HistoricalEntry is the list of items in history-list.
+type HistoricalEntry struct {
+	// ID is deprecated, use NZBID instead
+	ID int `json:"ID"`
+
+	// Name is the the name of nzb-file or info-name of URL, without path and
+	// extension. Ready for user-friendly output.
+	Name string `json:"Name"`
+
+	// RemainingFileCount is the number of parked files in group. If this number
+	// is greater than “0”, the history item can be returned to download queue
+	// using command “HistoryReturn” of method
+	RemainingFileCount int `json:"RemainingFileCount"`
+
+	// RetryData indicates something  -- not sure
+	RetryData bool `json:"RetryData"`
+
+	// HistoryTime is the date/time when the file was added to history (Time is
+	// in C/Unix format).
+	HistoryTime int `json:"HistoryTime"`
+
+	// Status Total status of the download. One of the predefined text constants
+	// such as SUCCESS/ALL or FAILURE/UNPACK
+	Status string `json:"Status"`
+
+	// Log is deprecated, was never really used
+	Log []interface{} `json:"Log"`
+
+	// NZBID is ID of NZB-file
+	NZBID int `json:"NZBID"`
+
+	// NZBFilename is the name of nzb-file, this file was added to queue from.
+	// The filename could include fullpath (if client sent it by adding the file
+	// to queue).
+	NZBFilename string `json:"NZBFilename"`
+
+	// DestDir is the destination directory for output files
+	DestDir string `json:"DestDir"`
+
+	// FinalDir is the final destination if set by one of post-processing scripts
+	FinalDir string `json:"FinalDir"`
+
+	// Category is the category for group or empty string if none category is
+	// assigned
+	Category string `json:"Category"`
+
+	// ParStatus is the ParStatus - Result of par-check/repair:
+	//
+	//    NONE - par-check wasn’t performed;
+	//    FAILURE - par-check has failed;
+	//    REPAIR_POSSIBLE - download is damaged, additional par-files were
+	//   					downloaded but the download was not repaired. Either
+	//  					the option ParRepair is disabled or the
+	//  					par-repair was cancelled by option ParTimeLimit;
+	//    SUCCESS - par-check was successful;
+	//    MANUAL - download is damaged but was not checked/repaired because
+	//   		   option ParCheck is set to Manual
+	ParStatus string `json:"ParStatus"`
+
+	// ExParStatus indicates if the download was repaired using duplicate
+	// par-scan mode (option ParScan=dupe):
+	//
+	//    RECIPIENT - repaired using blocks from other duplicates;
+	//    DONOR - has donated blocks to repair another duplicate;
+	ExParStatus string `json:"ExParStatus"`
+
+	// UnpackStatus is the result of unpack:
+	//
+	//    NONE - unpack wasn’t performed, either no archive files were found or
+	//   		 the unpack is disabled for that download or globally;
+	//    FAILURE - unpack has failed;
+	//    SPACE - unpack has failed due to not enough disk space;
+	//    PASSWORD - unpack has failed because the password was not provided or
+	//               was wrong. Only for rar5-archives;
+	//    SUCCESS - unpack was successful.
+	UnpackStatus string `json:"UnpackStatus"`
+
+	// MoveStatus is the result of moving files from intermediate directory into
+	// final directory:
+	//
+	//    NONE - the moving wasn’t made because either the option InterDir is
+	//   		 not in use or the par-check or unpack have failed;
+	//    SUCCESS - files were moved successfully;
+	//    FAILURE - the moving has failed.
+	MoveStatus string `json:"MoveStatus"`
+
+	// ScriptStatus is the
+	ScriptStatus string `json:"ScriptStatus"`
+
+	// DeleteStatus is the indicates if the download was deleted:
+	//
+	//    NONE - not deleted;
+	//    MANUAL - the download was manually deleted by user;
+	//    HEALTH - the download was deleted by health check;
+	//    DUPE - the download was deleted by duplicate check;
+	//    BAD - v14.0 the download was marked as BAD by a queue-script during
+	//   		download;
+	//    SCAN - v16.0 the download was deleted because the nzb-file could not
+	//    		 be parsed (malformed nzb-file);
+	//    COPY - v16.0 the download was deleted by duplicate check because an
+	//   		 nzb-file with exactly same content exists in download queue or
+	//  		 in history.
+	DeleteStatus string `json:"DeleteStatus"`
+
+	// MarkStatus indicates if the download was marked by user:
+	//
+	//    NONE - not marked;
+	//    GOOD - the download was marked as good by user using command Mark as
+	//           good in history dialog;
+	//    BAD - the download was marked as bad by user using command Mark as bad
+	//   		in history dialog;
+	MarkStatus string `json:"MarkStatus"`
+
+	// URLStatus is the result of URL-download:
+	//
+	//    NONE - that nzb-file were not fetched from an URL;
+	//    SUCCESS - that nzb-file was fetched from an URL;
+	//    FAILURE - the fetching of the URL has failed.
+	//    SCAN_SKIPPED - The URL was fetched successfully but downloaded file
+	//   				 was not nzb-file and was skipped by the scanner;
+	//    SCAN_FAILURE - The URL was fetched successfully but an error occurred
+	//   				 during scanning of the downloaded file. The downloaded
+	//  				 file isn’t a proper nzb-file. This status usually means
+	//	 				 the web-server has returned an error page (HTML page)
+	//	 				 instead of the nzb-file.
+	URLStatus string `json:"UrlStatus"`
+
+	// FileSizeLo is the initial size of all files in group in bytes, Low
+	// 32-bits of 64-bit value
+	FileSizeLo int `json:"FileSizeLo"`
+
+	// FileSizeHi is the initial size of all files in group in bytes, High
+	// 32-bits of 64-bit value
+	FileSizeHi int `json:"FileSizeHi"`
+
+	// FileSizeMB is the Initial size of all files in group in megabytes
+	FileSizeMB int `json:"FileSizeMB"`
+
+	// FileCount is the initial number of files in group
+	FileCount int `json:"FileCount"`
+
+	// MinPostTime is the date/time when the oldest file in the item was posted
+	// to newsgroup (Time is in C/Unix format).
+	MinPostTime int `json:"MinPostTime"`
+
+	// MaxPostTime is the date/time when the newest file in the item was posted
+	// to newsgroup (Time is in C/Unix format).
+	MaxPostTime int `json:"MaxPostTime"`
+
+	// TotalArticles is the total number of articles in all files of the group
+	TotalArticles int `json:"TotalArticles"`
+
+	// SuccessArticles is the number of successfully downloaded articles
+	SuccessArticles int `json:"SuccessArticles"`
+
+	// FailedArticles is the number of failed article downloads
+	FailedArticles int `json:"FailedArticles"`
+
+	// Health is the final health of the group, in permille. 1000 means 100.0%.
+	// Higher values are better
+	Health int `json:"Health"`
+
+	// CriticalHealth is the calculated critical health of the group, in
+	// permille. 1000 means 100.0%. The critical health is calculated based on
+	// the number and size of par-files. Lower values are better.
+	CriticalHealth int `json:"CriticalHealth"`
+
+	// DupeKey is the unique key (a string) for each title. In a case of newznab
+	// feeds the duplicate key (short: dupekey) is built by NZBGet automatically
+	DupeKey string `json:"DupeKey"`
+
+	// DupeScore is the confidence that NZBGet has that the article is a
+	// duplicate
+	DupeScore int `json:"DupeScore"`
+
+	// DupeMode is the duplicate mode. One of SCORE, ALL, FORCE
+	DupeMode string `json:"DupeMode"`
+
+	// Deleted indicates if the entry was deleted
+	Deleted bool `json:"Deleted"`
+
+	// DownloadedSizeLo is the amount of downloaded data for group in bytes, Low
+	// 32-bits of 64-bit value
+	DownloadedSizeLo int `json:"DownloadedSizeLo"`
+
+	// DownloadedSizeHi is the amount of downloaded data for group in bytes,
+	// High 32-bits of 64-bit value
+	DownloadedSizeHi int `json:"DownloadedSizeHi"`
+
+	// DownloadedSizeMB is the amount of downloaded data for group in megabytes
+	DownloadedSizeMB int `json:"DownloadedSizeMB"`
+
+	// DownloadTimeSec is the download time in seconds.
+	DownloadTimeSec int `json:"DownloadTimeSec"`
+
+	// PostTotalTimeSec is the total post-processing time in seconds
+	PostTotalTimeSec int `json:"PostTotalTimeSec"`
+
+	// ParTimeSec is the par-check time in seconds (incl. verification and
+	// repair).
+	ParTimeSec int `json:"ParTimeSec"`
+
+	// RepairTimeSec is the par-repair time in seconds
+	RepairTimeSec int `json:"RepairTimeSec"`
+
+	// UnpackTimeSec is the unpack time in seconds
+	UnpackTimeSec int `json:"UnpackTimeSec"`
+
+	// MessageCount is the number of messages stored in the item log. Messages
+	// can be retrieved with method
+	MessageCount int `json:"MessageCount"`
+
+	// ExtraParBlocks is the amount of extra par-blocks received from other
+	// duplicates or donated to other duplicates, when duplicate par-scan mode
+	// was used (option ParScan=dupe):
+	//
+	//    > 0 - has received extra blocks;
+	//    < 0 - has donated extra blocks;
+	ExtraParBlocks int `json:"ExtraParBlocks"`
+
+	// Parameters are the post-processing parameters for group
+	Parameters []struct {
+		Name  string `json:"Name"`
+		Value string `json:"Value"`
+	} `json:"Parameters"`
+
+	// ScriptStatuses are the status info of each post-processing script
+	ScriptStatuses []struct {
+		Name   string `json:"Name"`
+		Status string `json:"Status"`
+	} `json:"ScriptStatuses"`
+
+	// ServerStats are the per-server article completion statistics
+	ServerStats []struct {
+		ServerID        int `json:"ServerID"`
+		SuccessArticles int `json:"SuccessArticles"`
+		FailedArticles  int `json:"FailedArticles"`
+	} `json:"ServerStats"`
+}
+
+func (n *NZBGet) History() ([]HistoricalEntry, error) {
+	var history []HistoricalEntry
+	err := n.get("history", &history)
+	if err != nil {
+		return nil, err
+	}
+	return history, nil
 }
 
 func (n NZBGet) get(endpoint string, responseObject interface{}) error {
