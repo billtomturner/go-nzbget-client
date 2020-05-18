@@ -19,7 +19,7 @@ func TestNZBGet(t *testing.T) {
 }
 
 const (
-	nzbgetURL = "http://localhost:8090"
+	nzbgetURL = "http://localhost:6789"
 	config    = `
 {
   "version": "1.1",
